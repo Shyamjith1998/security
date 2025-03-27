@@ -1,0 +1,17 @@
+body {
+    background-color: #f4f6f8;
+    font-family: "Segoe UI", sans-serif;
+}
+
+.card {
+    border: none;
+    border-radius: 12px;
+}
+
+textarea, input {
+    border-radius: 6px;
+}
+
+footer {
+    font-size: 0.85rem;
+}
