@@ -1,0 +1,53 @@
+Development region: us-east-2 (Ohio)
+
+vpc: securityvpc
+subnet: securitysubnet
+route table: securityroutetable
+internet gateway; securitygateway
+key pair: securitykeypair
+ec2: securityserver
+
+Permissions on pc:
+icacls "E:\anandhu_security_2\project_security\securitykeypair.pem" /inheritance:r
+icacls "E:\anandhu_security_2\project_security\securitykeypair.pem" /grant:r "%username%":(r)
+
+instance_public_ip = "18.117.152.162"
+security_group_id = "sg-057a381a03397a6ca"
+
+---------------------------------------------------------------------------------
+connection:
+ssh -i securitykeypair.pem ec2-user@18.117.152.162
+---------------------------------------------------------------------------------
+
+on ec2:
+sudo yum groupinstall "Development Tools" -y
+sudo yum install gcc openssl-devel bzip2-devel libffi-devel -y
+
+cd /usr/src
+sudo curl -O https://www.python.org/ftp/python/3.11.5/Python-3.11.5.tgz
+sudo tar xzf Python-3.11.5.tgz
+cd Python-3.11.5
+sudo ./configure --enable-optimizations
+sudo make altinstall
+
+python3.11 --version
+
+Now transferring the project on ec2 server:
+scp -i "securitykeypair.pem" -r project ec2-user@18.117.152.162:/home/ec2-user/
+
+cd /home/ec2-user/project
+python3.11 -m venv venv
+source venv/bin/activate
+
+pip install -r requirements.txt
+
+nohup python app.py > output.log 2>&1 &
+
+In aws ec2 security group:
+Custom TCP (port 5000 for API testing)
+
+check server status on ec2:
+cat output.log
+
+application can be viewed on:
+http://18.117.152.162:5000/

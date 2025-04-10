@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Secure Chat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <style>
+        body {
+            background-color: #ece5dd;
+        }
+
+        .chat-container {
+            max-width: 720px;
+            margin: 40px auto;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            height: 80vh;
+        }
+
+        .chat-header {
+            padding: 10px 20px;
+            background-color: #075e54;
+            color: #fff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+        }
+
+        #chat-box {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background-color: #e5ddd5;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message {
+            max-width: 70%;
+            padding: 10px 15px;
+            margin: 5px 0;
+            border-radius: 20px;
+            word-wrap: break-word;
+        }
+
+        .message.me {
+            background-color: #dcf8c6;
+            align-self: flex-end;
+            text-align: right;
+        }
+
+        .message.them {
+            background-color: #fff;
+            align-self: flex-start;
+        }
+
+        .chat-footer {
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+        }
+
+        .chat-footer .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-footer input {
+            border-radius: 20px;
+        }
+
+        .toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <div class="chat-header">
+        <div><i class="fas fa-lock me-2"></i>Secure Chat - <strong>{{ username }}</strong></div>
+        <a class="btn btn-sm btn-light" href="/logout"><i class="fas fa-sign-out-alt me-1"></i> Logout</a>
+    </div>
+
+    <div id="chat-box"></div>
+
+    <div class="chat-footer">
+        <form id="message-form">
+            <div class="input-group">
+                <input type="text" id="recipient" class="form-control" placeholder="Recipient Username" required>
+                <input type="text" id="message" class="form-control" placeholder="Your message..." required>
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div class="toast-container">
+    <div id="toast" class="toast text-bg-primary border-0" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="d-flex">
+            <div class="toast-body" id="toast-body">Message received</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const socket = io();
+    socket.emit('join');
+
+    const currentUser = "{{ username }}";
+
+    function showToast(message) {
+        document.getElementById("toast-body").textContent = message;
+        const toast = new bootstrap.Toast(document.getElementById("toast"));
+        toast.show();
+    }
+
+    function appendMessage(sender, text) {
+        const chatBox = document.getElementById("chat-box");
+        const messageDiv = document.createElement("div");
+        messageDiv.classList.add("message");
+        messageDiv.classList.add(sender === currentUser ? "me" : "them");
+        messageDiv.innerHTML = `<strong>${sender}:</strong><br>${text}`;
+        chatBox.appendChild(messageDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function loadMessages() {
+        fetch("/get_messages")
+            .then(res => res.json())
+            .then(messages => {
+                const chatBox = document.getElementById("chat-box");
+                chatBox.innerHTML = "";
+                messages.forEach(msg => {
+                    if (msg.message && msg.message !== "[Failed to decrypt]") {
+                        appendMessage(msg.sender, msg.message);
+                    }
+                });
+            });
+    }
+
+    socket.on("receive_message", function(data) {
+        loadMessages();
+        showToast(`New message from ${data.sender}`);
+    });
+
+    document.getElementById("message-form").addEventListener("submit", function(e) {
+        e.preventDefault();
+        const recipient = document.getElementById("recipient").value.trim();
+        const message = document.getElementById("message").value.trim();
+        if (!recipient || !message) return;
+
+        socket.emit("send_message", { recipient, message });
+
+        // Show sender's message immediately
+        appendMessage(currentUser, message);
+        document.getElementById("message").value = "";
+    });
+
+    // Load messages initially
+    loadMessages();
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
