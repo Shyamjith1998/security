@@ -1,0 +1,48 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            REPO="https://github.com/Shyamjith1998/security.git"
+            APP_DIR="$HOME/security"
+
+            # Remove previous version (optional — ensures fresh clone every time)
+            rm -rf $APP_DIR
+
+            # Clone fresh repo
+            git clone $REPO $APP_DIR
+            cd $APP_DIR
+
+            # (Optional) Clean up existing venv and recreate it
+            rm -rf venv
+            python3.11 -m venv venv
+            source venv/bin/activate
+
+            # Install dependencies
+            if [ -f requirements.txt ]; then
+              pip install --upgrade pip
+              pip install -r requirements.txt
+            fi
+
+            # Kill any existing app.py process
+            pkill -f "python3.11 app.py" || true
+
+            # Start app in background with nohup
+            nohup bash -c 'source venv/bin/activate && python3.11 app.py' > app.log 2>&1 &
