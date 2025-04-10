@@ -24,28 +24,24 @@ jobs:
           ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_HOST }} << 'EOF'
             set -e
 
-            # Navigate to home
-            cd ~
+            echo "🔪 Killing all previous app.py instances..."
+            ps aux | grep app.py | grep -v grep | awk '{print $2}' | xargs -r kill -9 || echo "No app.py process running"
 
-            # Kill previous nohup-started app.py process (if exists)
-            pgrep -f "python3.11 app.py" && pkill -f "python3.11 app.py" || echo "No running app.py process"
-
-            # Remove old app
+            echo "📁 Cleaning old code..."
             rm -rf security
 
-            # Clone latest code
+            echo "📥 Cloning latest code..."
             git clone https://github.com/Shyamjith1998/security.git
             cd security
 
-            # Setup Python venv
-            rm -rf venv
+            echo "🐍 Setting up virtual environment..."
             python3.11 -m venv venv
             source venv/bin/activate
 
-            # Install dependencies
+            echo "📦 Installing requirements..."
             pip install --upgrade pip
             pip install -r requirements.txt
 
-            # Start the app in background with nohup
+            echo "🚀 Starting the Flask app with nohup..."
             nohup bash -c 'source venv/bin/activate && python3.11 app.py' > app.log 2>&1 &
           EOF
