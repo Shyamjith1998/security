@@ -46,3 +46,4 @@ jobs:
 
             # Start app in background with nohup
             nohup bash -c 'source venv/bin/activate && python3.11 app.py' > app.log 2>&1 &
+
